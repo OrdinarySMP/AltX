@@ -89,15 +89,22 @@ public class Commands {
                               }))
                   .then(
                       CommandManager.literal("authorize")
-                          .requires(Permissions.require("altx.authorize", 4))
                           .then(
-                              CommandManager.argument("player1", StringArgumentType.string())
-                                  .suggests(this::extracted)
+                              CommandManager.literal("add")
+                                  .requires(Permissions.require("altx.authorize", 4))
                                   .then(
                                       CommandManager.argument(
-                                              "player2", StringArgumentType.string())
+                                              "player1", StringArgumentType.string())
                                           .suggests(this::extracted)
-                                          .executes(AuthorizeAltsCommand::execute)))));
+                                          .then(
+                                              CommandManager.argument(
+                                                      "player2", StringArgumentType.string())
+                                                  .suggests(this::extracted)
+                                                  .executes(AuthorizeAltsCommand::execute))))
+                          .then(
+                              CommandManager.literal("list")
+                                  .requires(Permissions.require("altx.authorize", 4))
+                                  .executes(AuthorizeAltsCommand::listAuthorizedExecute))));
         });
   }
 
