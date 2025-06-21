@@ -7,6 +7,7 @@ import com.xadale.playerlogger.PlayerLogger;
 import com.xadale.playerlogger.Utils;
 import com.xadale.playerlogger.data.AuthorizedAccounts;
 import java.util.List;
+import java.util.stream.Collectors;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -37,6 +38,30 @@ public class AuthorizeAltsCommand {
         .getSource()
         .sendFeedback(() -> Text.literal("Successfully added authorized accounts"), false);
 
+    return 1;
+  }
+
+  public static int listAuthorizedExecute(CommandContext<ServerCommandSource> context) {
+    List<AuthorizedAccounts> authorizedAccounts =
+        PlayerLogger.getInstance().getAuthorizedAccountsRepository().getAll().toList();
+
+    StringBuilder response = new StringBuilder();
+    authorizedAccounts.forEach(
+        auth -> {
+          response.append("\n");
+          response.append("§3- §f");
+          String playernames =
+              auth.getUuids().stream().map(Utils::getPlayerName).collect(Collectors.joining(", "));
+          response.append(playernames);
+        });
+
+    if (authorizedAccounts.isEmpty()) {
+      response.append("§cNo authorized accounts found.");
+    } else {
+      response.insert(0, "§bAuthorized accounts:");
+    }
+
+    context.getSource().sendFeedback(() -> Text.literal(response.toString()), false);
     return 1;
   }
 }
