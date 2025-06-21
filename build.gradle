@@ -1,6 +1,7 @@
 plugins {
 	id 'fabric-loom' version '1.10.1'
 	id 'maven-publish'
+	id 'com.github.johnrengelman.shadow' version "8+"
 }
 
 group = project.maven_group
@@ -15,6 +16,7 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	mavenCentral()
 }
 
 loom {
@@ -26,7 +28,16 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+}
 
+configurations {
+	embed
+	compileOnly.extendsFrom(embed)
+}
+
+shadowJar {
+	configurations = [project.configurations.embed]
+	relocate 'club.minnced', 'dcshadow.club.minnced'
 }
 
 dependencies {
@@ -39,6 +50,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	include(modImplementation("me.lucko:fabric-permissions-api:${project.fabric_permission_api_version}"))
+
+	embed implementation("club.minnced:discord-webhooks:${project.minnced_discord_webhook_version}")
 }
 
 processResources {
@@ -67,6 +80,14 @@ jar {
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}"}
 	}
+}
+
+remapJar {
+	// wait until the shadowJar is done
+	dependsOn(shadowJar)
+	mustRunAfter(shadowJar)
+	// Set the input jar for the task. Here use the shadow Jar that include the .class of the transitive dependency
+	inputFile = file(shadowJar.archiveFile)
 }
 
 // configure the maven publication
