@@ -1,5 +1,6 @@
 package com.xadale.playerlogger;
 
+import club.minnced.discord.webhook.WebhookClient;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,15 +8,19 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.util.Objects;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import me.lucko.fabric.api.permissions.v0.Permissions;
 
 public class PlayerLogger implements ModInitializer {
 
   private File logFile;
+
+  private WebhookClient webhookClient;
 
   @Override
   public void onInitialize() {
@@ -24,6 +29,7 @@ public class PlayerLogger implements ModInitializer {
       logDir.mkdir(); // Creates the folder if it doesn't exist
     }
     this.logFile = new File(logDir, "player_ips.txt");
+    this.loadWebhook(logDir);
 
     // Register connection event to log player IPs
     ServerPlayConnectionEvents.JOIN.register(
@@ -58,6 +64,10 @@ public class PlayerLogger implements ModInitializer {
                 // Found one or more potential alts
                 String message =
                     "Player " + playerName + " is a potential alt of: " + potentialAlts + ".";
+
+                if (this.webhookClient != null) {
+                  this.webhookClient.send(message);
+                }
 
                 // Send the message to staff
                 server
@@ -112,5 +122,27 @@ public class PlayerLogger implements ModInitializer {
 
   public File getLogFile() {
     return this.logFile;
+  }
+
+  private void loadWebhook(File logDir) {
+    File webhookUrlFile = new File(logDir, "webhook-url.txt");
+    String webhookUrl = "";
+
+    try {
+      if (!webhookUrlFile.exists()) {
+        webhookUrlFile.createNewFile();
+      }
+      webhookUrl = Files.readString(webhookUrlFile.toPath());
+    } catch (IOException e) {
+      System.out.println("Failed to load webhook url: " + e.getMessage());
+    }
+
+    if (!Objects.equals(webhookUrl, "")) {
+      try {
+        this.webhookClient = WebhookClient.withUrl(webhookUrl);
+      } catch (IllegalArgumentException e) {
+        System.out.println("Failed to load webhook: " + e.getMessage());
+      }
+    }
   }
 }

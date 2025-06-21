@@ -12,6 +12,7 @@ AltX is a lightweight serverside mod for minecraft fabric that:
 Features
 
     IP Logging: Automatically logs player IPs.
+    Discord notification via webhook.
 
 Installation
 
