@@ -50,6 +50,7 @@ public class NotificationHandler {
       return;
     }
     String message = getMessage(uuid, filteredUuids);
+    WebhookMessageSender.sendMessage(message);
 
     PlayerLogger.getInstance()
         .getServer()
