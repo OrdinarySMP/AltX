@@ -73,6 +73,7 @@ public class PlayerLogger implements ModInitializer {
   public void reloadConfig() {
     LogUtils.getLogger().info("Reloading Config");
     this.config = Config.loadConfig();
+    WebhookMessageSender.reload();
     LogUtils.getLogger().info("Config succesfully reloaded");
   }
 
