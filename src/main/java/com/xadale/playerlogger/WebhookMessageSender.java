@@ -7,25 +7,24 @@ import com.mojang.logging.LogUtils;
 
 public class WebhookMessageSender {
 
-  private static WebhookClient webhookClient = setupWebhook();
-  private static final String WEBHOOK_URL =
-      PlayerLogger.getInstance().getConfig().altNotifs.webhookUrl;
+  private static WebhookClient webhookClient = null;
   private static final String WEBHOOK_NAME = "AltX Notification";
   private static final String WEBHOOK_AVATAR_URL =
       "https://raw.githubusercontent.com/OrdinarySMP/AltX/main/assets/AltX-avatar.png";
 
-  private static WebhookClient setupWebhook() {
+  public static void reload() {
     if (!PlayerLogger.getInstance().getConfig().altNotifs.enableWebhookNotifs) {
-      return null;
+      webhookClient = null;
+      return;
     }
 
-    WebhookClient client = null;
+    String webhookUrl = PlayerLogger.getInstance().getConfig().altNotifs.webhookUrl;
     try {
-      client = WebhookClient.withUrl(WEBHOOK_URL);
+      webhookClient = WebhookClient.withUrl(webhookUrl);
     } catch (IllegalArgumentException e) {
+      webhookClient = null;
       LogUtils.getLogger().warn("Failed to load webhook: " + e.getMessage());
     }
-    return client;
   }
 
   public static void sendMessage(String messageString) {
