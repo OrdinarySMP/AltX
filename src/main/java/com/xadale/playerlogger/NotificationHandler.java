@@ -62,10 +62,7 @@ public class NotificationHandler {
                 PlayerLogger.getInstance()
                     .getLastReadNotifRepository()
                     .get(player.getUuid())
-                    // TODO: CHANGEEEEE
-                    .get()
-                    .setLastNotifId(getLastNotifId() + 1);
-                ;
+                    .ifPresent(lastReadNotif -> lastReadNotif.setLastNotifId(getLastNotifId() + 1));
               }
             });
 
