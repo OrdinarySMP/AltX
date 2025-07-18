@@ -57,6 +57,12 @@ public class Config {
     })
     public boolean enableNotifs = true;
 
+    @TomlComment("send notifications to a webhook")
+    public boolean enableWebhookNotifs = false;
+
+    @TomlComment("url of the webhook")
+    public String webhookUrl = "";
+
     @TomlComment("show notifs issued when player was offline")
     public boolean showMissedNotifsOnJoin = true;
 
