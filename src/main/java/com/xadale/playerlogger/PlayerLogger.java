@@ -1,160 +1,115 @@
 package com.xadale.playerlogger;
 
-import club.minnced.discord.webhook.WebhookClient;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import com.mojang.logging.LogUtils;
+import com.xadale.playerlogger.compat.FloodgateIntegration;
+import com.xadale.playerlogger.config.Config;
+import com.xadale.playerlogger.repositories.AuthorizedAccountsRepository;
+import com.xadale.playerlogger.repositories.IpAssRepository;
+import com.xadale.playerlogger.repositories.LastReadNotifRepository;
+import com.xadale.playerlogger.repositories.NotifRepository;
+import com.xadale.playerlogger.repositories.implementations.JsonAuthorizedAccountsRepositoryImpl;
+import com.xadale.playerlogger.repositories.implementations.JsonIpAssRepositoryImpl;
+import com.xadale.playerlogger.repositories.implementations.JsonLastReadNotifRepositoryImpl;
+import com.xadale.playerlogger.repositories.implementations.JsonNotifRepositoryImpl;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
-import java.util.Objects;
-
-import club.minnced.discord.webhook.send.WebhookMessageBuilder;
-import me.lucko.fabric.api.permissions.v0.Permissions;
+import java.nio.file.Path;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.server.MinecraftServer;
 
 public class PlayerLogger implements ModInitializer {
 
-  private File logFile;
-
-  private WebhookClient webhookClient;
+  public static String modId = "altx";
+  private static PlayerLogger instance;
+  private MinecraftServer server;
+  private FloodgateIntegration floodgateIntegration;
+  private IpAssRepository ipAssDataRepository;
+  private NotifRepository notifRepository;
+  private LastReadNotifRepository lastReadNotifRepository;
+  private AuthorizedAccountsRepository authorizedAccountsRepository;
+  private Config config = Config.loadConfig();
 
   @Override
   public void onInitialize() {
-    File logDir = new File("AltX-Files");
-    if (!logDir.exists()) {
-      logDir.mkdir(); // Creates the folder if it doesn't exist
+    PlayerLogger.instance = this;
+
+    ServerLifecycleEvents.SERVER_STARTING.register(s -> this.server = s);
+    this.floodgateIntegration = new FloodgateIntegration();
+
+    File ipAssFile =
+        PlayerLogger.getConfigFolder().resolve(PlayerLogger.modId + ".ips.json").toFile();
+    File notifFile =
+        PlayerLogger.getConfigFolder().resolve(PlayerLogger.modId + ".notifs.json").toFile();
+    File lastReadNotifFile =
+        PlayerLogger.getConfigFolder().resolve(PlayerLogger.modId + ".lastReadNotif.json").toFile();
+    File authorizedAccountsFile =
+        PlayerLogger.getConfigFolder()
+            .resolve(PlayerLogger.modId + ".authorizedAccounts.json")
+            .toFile();
+
+    try {
+      Files.createDirectories(PlayerLogger.getConfigFolder());
+    } catch (IOException ignored) {
     }
-    this.logFile = new File(logDir, "player_ips.txt");
-    this.loadWebhook(logDir);
 
-    // Register connection event to log player IPs
-    ServerPlayConnectionEvents.JOIN.register(
-        (handler, sender, server) -> {
-          String playerName = handler.getPlayer().getName().getString();
+    this.ipAssDataRepository = JsonIpAssRepositoryImpl.from(ipAssFile);
+    this.notifRepository = JsonNotifRepositoryImpl.from(notifFile);
+    this.lastReadNotifRepository = JsonLastReadNotifRepositoryImpl.from(lastReadNotifFile);
+    this.authorizedAccountsRepository =
+        JsonAuthorizedAccountsRepositoryImpl.from(authorizedAccountsFile);
 
-          String ipAddress = "Unknown IP";
-          if (handler.getConnectionAddress() instanceof InetSocketAddress inetSocketAddress) {
-            ipAddress = inetSocketAddress.getAddress().getHostAddress();
-          }
+    ServerPlayConnectionEvents.JOIN.register(NotificationHandler::onJoin);
 
-          String logEntry = playerName + ";" + ipAddress;
+    NotificationHandler.purgeOldNotifs(this.config.altNotifs.purgePeriod);
 
-          // Only proceed if the log entry is new
-          if (writeToFileIfAbsent(logEntry)) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
-              StringBuilder potentialAlts = new StringBuilder();
-              String line;
-              while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(";");
-                if (parts.length == 2
-                    && parts[1].equals(ipAddress)
-                    && !parts[0].equals(playerName)) {
-                  if (potentialAlts.length() > 0) {
-                    potentialAlts.append(", "); // Add a comma between names
-                  }
-                  potentialAlts.append(parts[0]);
-                }
-              }
-
-              if (potentialAlts.length() > 0) {
-                // Found one or more potential alts
-                String ingameMessage =
-                    "Player " + playerName + " is a potential alt of: " + potentialAlts + ".";
-
-                String discordMessage =
-                    "Player `" + playerName + "` is a potential alt of: `" + potentialAlts + "`";
-
-                // Send the message in discord
-                if (this.webhookClient != null) {
-                  WebhookMessageBuilder builder =
-                      new WebhookMessageBuilder()
-                          .setContent(discordMessage)
-                          .setUsername("AltX Notification")
-                          .setAvatarUrl("https://raw.githubusercontent.com/OrdinarySMP/AltX/main/assets/AltX-avatar.png");
-
-                  this.webhookClient.send(builder.build());
-                }
-
-                // Send the message to staff
-                server
-                    .getPlayerManager()
-                    .getPlayerList()
-                    .forEach(
-                        player -> {
-                          if (Permissions.check(player, "altx.notify", 4)) {
-                            player.sendMessage(
-                                Text.literal(ingameMessage).formatted(Formatting.RED), false);
-                          }
-                        });
-              }
-            } catch (IOException e) {
-              System.err.println("Failed to read log file: " + e.getMessage());
-            }
-          }
-        });
-
-    Commands commands = new Commands(this);
+    Commands commands = new Commands();
     commands.register();
   }
 
-  private boolean writeToFileIfAbsent(String entry) {
-    try {
-      if (!logFile.exists()) {
-        logFile.createNewFile();
-      }
-
-      boolean alreadyLogged = false;
-      try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          if (line.trim().equals(entry)) {
-            alreadyLogged = true;
-            break;
-          }
-        }
-      }
-
-      if (!alreadyLogged) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true))) {
-          writer.write(entry + "\n");
-        }
-        return true; // New entry added
-      }
-    } catch (IOException e) {
-      System.err.println("Failed to write player log: " + e.getMessage());
-    }
-    return false; // No new entry added or an exception occurred
+  public void reloadConfig() {
+    LogUtils.getLogger().info("Reloading Config");
+    this.config = Config.loadConfig();
+    WebhookMessageSender.reload();
+    LogUtils.getLogger().info("Config succesfully reloaded");
   }
 
-  public File getLogFile() {
-    return this.logFile;
+  public static Path getConfigFolder() {
+    return FabricLoader.getInstance().getConfigDir().resolve(PlayerLogger.modId);
   }
 
-  private void loadWebhook(File logDir) {
-    File webhookUrlFile = new File(logDir, "webhook-url.txt");
-    String webhookUrl = "";
+  public static PlayerLogger getInstance() {
+    return PlayerLogger.instance;
+  }
 
-    try {
-      if (!webhookUrlFile.exists()) {
-        webhookUrlFile.createNewFile();
-      }
-      webhookUrl = Files.readString(webhookUrlFile.toPath());
-    } catch (IOException e) {
-      System.out.println("Failed to load webhook url: " + e.getMessage());
-    }
+  public MinecraftServer getServer() {
+    return this.server;
+  }
 
-    if (!Objects.equals(webhookUrl, "")) {
-      try {
-        this.webhookClient = WebhookClient.withUrl(webhookUrl);
-      } catch (IllegalArgumentException e) {
-        System.out.println("Failed to load webhook: " + e.getMessage());
-      }
-    }
+  public FloodgateIntegration getFloodgateIntegration() {
+    return this.floodgateIntegration;
+  }
+
+  public IpAssRepository getIpAssRepository() {
+    return this.ipAssDataRepository;
+  }
+
+  public NotifRepository getNotifRepository() {
+    return this.notifRepository;
+  }
+
+  public LastReadNotifRepository getLastReadNotifRepository() {
+    return this.lastReadNotifRepository;
+  }
+
+  public AuthorizedAccountsRepository getAuthorizedAccountsRepository() {
+    return this.authorizedAccountsRepository;
+  }
+
+  public Config getConfig() {
+    return this.config;
   }
 }

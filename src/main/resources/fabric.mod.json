@@ -1,31 +1,35 @@
 {
-	"schemaVersion": 1,
-	"id": "altx",
-	"version": "${version}",
-	"name": "AltX",
-	"description": "A lightweight Fabric mod that logs player IPs and detects alt accounts.",
-	"authors": [
-		"MrCookiePrincess"
-	],
-	"contact": {
-		"homepage": "https://github.com/OrdinarySMP",
-		"sources": "https://github.com/OrdinarySMP/AltX-fabric"
-	},
-	"license": "GPL-3.0-or-later",
-	"icon": "assets/modid/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"com.xadale.playerlogger.PlayerLogger"
-		]
-	},
-	"depends": {
-		"fabricloader": ">=0.16.9",
-		"minecraft": "~1.21.4",
-		"java": ">=21",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
-	}
+  "schemaVersion": 1,
+  "id": "altx",
+  "version": "${version}",
+  "name": "AltX",
+  "description": "A lightweight Fabric mod that logs player IPs and detects alt accounts.",
+  "authors": [
+    "MrCookiePrincess"
+  ],
+  "contributors": [
+    "PadBro",
+    "GoldenKoopa"
+  ],
+  "contact": {
+    "homepage": "https://github.com/OrdinarySMP",
+    "sources": "https://github.com/OrdinarySMP/AltX"
+  },
+  "license": "GPL-3.0-or-later",
+  "icon": "assets/modid/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "com.xadale.playerlogger.PlayerLogger"
+    ]
+  },
+  "mixins": [
+    "altx.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
 }
