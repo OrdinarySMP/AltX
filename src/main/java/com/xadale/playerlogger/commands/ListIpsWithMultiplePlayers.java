@@ -11,7 +11,11 @@ import java.util.Map;
 import java.util.Set;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 public class ListIpsWithMultiplePlayers {
   public static int execute(CommandContext<ServerCommandSource> context, File logFile) {
@@ -28,7 +32,7 @@ public class ListIpsWithMultiplePlayers {
     }
 
     // Filter and build the result
-    StringBuilder response = new StringBuilder("§bIPs with two or more users:");
+    MutableText response = Text.literal("§bIPs with two or more users:");
     boolean found = false;
 
     for (Map.Entry<String, Set<String>> entry : ipToPlayers.entrySet()) {
@@ -36,7 +40,7 @@ public class ListIpsWithMultiplePlayers {
         found = true;
         response.append("\n");
         if (Permissions.check(source, "altx.viewips", 4)) {
-          response.append("§3- (§b").append(entry.getKey()).append("§3): §f");
+          response.append("§3- (§b").append(getIpText(entry.getKey())).append("§3): §f");
         } else {
           response.append("§3- §f");
         }
@@ -49,9 +53,19 @@ public class ListIpsWithMultiplePlayers {
     }
 
     // Send the response
-    context.getSource().sendFeedback(() -> Text.literal(response.toString()), false);
+    context.getSource().sendFeedback(() -> response, false);
 
     return 1;
+  }
+
+  private static MutableText getIpText(String ip) {
+    return Text.literal(ip)
+        .styled(
+            style ->
+                style
+                    .withColor(Formatting.AQUA) // §b
+                    .withClickEvent(new ClickEvent.CopyToClipboard(ip))
+                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Copy"))));
   }
 
   private static void readLogFile(File logFile, Map<String, Set<String>> ipToPlayers)

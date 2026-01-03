@@ -12,10 +12,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 public class HandleAltsCommand {
 
@@ -67,7 +70,7 @@ public class HandleAltsCommand {
     // Query is a username
     Set<String> ips = playerToIps.get(query);
     if (ips != null) {
-      StringBuilder response = new StringBuilder();
+      MutableText response = Text.literal("");
       if (Permissions.check(source, "altx.viewips", 4)) {
         response
             .append("§bPlayer §3")
@@ -82,19 +85,29 @@ public class HandleAltsCommand {
 
         response.append("\n");
         if (Permissions.check(source, "altx.viewips", 4)) {
-          response.append("§3- (§b").append(ip).append("§3): §f");
+          response.append("§3- (§b").append(getIpText(ip)).append("§3): §f");
         } else {
           response.append("§3- §f");
         }
         response.append(String.join(", ", players));
       }
-      context.getSource().sendFeedback(() -> Text.literal(response.toString()), false);
+      context.getSource().sendFeedback(() -> response, false);
     } else {
       context
           .getSource()
           .sendFeedback(() -> Text.literal("§cNo IPs found for player: " + query), false);
     }
     return 1;
+  }
+
+  private static MutableText getIpText(String ip) {
+    return Text.literal(ip)
+        .styled(
+            style ->
+                style
+                    .withColor(Formatting.AQUA) // §b
+                    .withClickEvent(new ClickEvent.CopyToClipboard(ip))
+                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Copy"))));
   }
 
   private static void readLogFile(
