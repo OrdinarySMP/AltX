@@ -5,10 +5,9 @@ import com.xadale.playerlogger.commands.HandleAltsCommand;
 import com.xadale.playerlogger.commands.ListIpsWithMultiplePlayers;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 
 public class Commands {
 
@@ -24,7 +23,7 @@ public class Commands {
         (dispatcher, registryAccess, environment) -> {
           // Root command AltX
           dispatcher.register(
-              CommandManager.literal("altx")
+              net.minecraft.commands.Commands.literal("altx")
                   .requires(Permissions.require("altx.command", 4))
                   .executes(
                       context -> {
@@ -33,7 +32,7 @@ public class Commands {
                         help.append("\n§3Commands:");
                         help.append("\n§b/altx §fShows a list of available AltX commands");
 
-                        final ServerCommandSource source = context.getSource();
+                        final CommandSourceStack source = context.getSource();
 
                         if (Permissions.check(source, "altx.list", 4)) {
                           help.append(
@@ -51,28 +50,27 @@ public class Commands {
                         }
                         help.append("\n§3Special thanks to the Ordinary SMP team!");
 
-                        context
-                            .getSource()
-                            .sendFeedback(() -> Text.literal(help.toString()), false);
+                        source
+                            .sendSuccess(() -> Component.literal(help.toString()), false);
 
                         return 1; // Return success
                       })
                   // Command Trace
                   .then(
-                      CommandManager.literal("trace")
+                          net.minecraft.commands.Commands.literal("trace")
                           .requires(Permissions.require("altx.trace", 4))
                           .then(
-                              CommandManager.argument("query", StringArgumentType.string())
+                                  net.minecraft.commands.Commands.argument("query", StringArgumentType.string())
                                   .suggests(
                                       (context, builder) -> {
                                         String partialQuery =
                                             builder.getRemaining(); // Get the current typed string
-                                        for (ServerPlayerEntity player :
+                                        for (ServerPlayer player :
                                             context
                                                 .getSource()
                                                 .getServer()
-                                                .getPlayerManager()
-                                                .getPlayerList()) {
+                                                .getPlayerList()
+                                                .getPlayers()) {
                                           String playerName = player.getName().getString();
                                           if (playerName
                                               .toLowerCase()
@@ -89,7 +87,7 @@ public class Commands {
 
                   // Command list
                   .then(
-                      CommandManager.literal("list")
+                          net.minecraft.commands.Commands.literal("list")
                           .requires(Permissions.require("altx.list", 4))
                           .executes(
                               (context) ->

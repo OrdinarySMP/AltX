@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.14-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 	id 'com.gradleup.shadow' version "9+"
 }
@@ -43,13 +43,11 @@ shadowJar {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	include(modImplementation("me.lucko:fabric-permissions-api:${project.fabric_permission_api_version}"))
+    implementation(include("me.lucko:fabric-permissions-api:${project.property("fabric_permission_api_version")}"))
 
 	embed implementation("club.minnced:discord-webhooks:${project.minnced_discord_webhook_version}")
 }
@@ -63,7 +61,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 java {
@@ -72,22 +70,14 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}"}
 	}
-}
-
-remapJar {
-	// wait until the shadowJar is done
-	dependsOn(shadowJar)
-	mustRunAfter(shadowJar)
-	// Set the input jar for the task. Here use the shadow Jar that include the .class of the transitive dependency
-	inputFile = file(shadowJar.archiveFile)
 }
 
 // configure the maven publication

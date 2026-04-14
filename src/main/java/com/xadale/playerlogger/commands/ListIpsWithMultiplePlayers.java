@@ -10,29 +10,29 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 
 public class ListIpsWithMultiplePlayers {
-  public static int execute(CommandContext<ServerCommandSource> context, File logFile) {
+  public static int execute(CommandContext<CommandSourceStack> context, File logFile) {
     Map<String, Set<String>> ipToPlayers = new HashMap<>();
 
     // check if show ips
-    final ServerCommandSource source = context.getSource();
+    final CommandSourceStack source = context.getSource();
 
     try {
       ListIpsWithMultiplePlayers.readLogFile(logFile, ipToPlayers);
     } catch (IOException e) {
-      context.getSource().sendError(Text.literal("§cFailed to read log file: " + e.getMessage()));
+      source.sendFailure(Component.literal("§cFailed to read log file: " + e.getMessage()));
       return 0;
     }
 
     // Filter and build the result
-    MutableText response = Text.literal("§bIPs with two or more users:");
+      MutableComponent response = Component.literal("§bIPs with two or more users:");
     boolean found = false;
 
     for (Map.Entry<String, Set<String>> entry : ipToPlayers.entrySet()) {
@@ -53,19 +53,19 @@ public class ListIpsWithMultiplePlayers {
     }
 
     // Send the response
-    context.getSource().sendFeedback(() -> response, false);
+    source.sendSuccess(() -> response, false);
 
     return 1;
   }
 
-  private static MutableText getIpText(String ip) {
-    return Text.literal(ip)
-        .styled(
+  private static Component getIpText(String ip) {
+    return Component.literal(ip)
+        .withStyle(
             style ->
                 style
-                    .withColor(Formatting.AQUA) // §b
+                    .withColor(ChatFormatting.AQUA) // §b
                     .withClickEvent(new ClickEvent.CopyToClipboard(ip))
-                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Copy"))));
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Copy"))));
   }
 
   private static void readLogFile(File logFile, Map<String, Set<String>> ipToPlayers)

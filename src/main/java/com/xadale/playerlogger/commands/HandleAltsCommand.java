@@ -13,36 +13,34 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 
 public class HandleAltsCommand {
 
   private static final Pattern ipPattern = Pattern.compile("^(\\d{1,3}\\.){3}\\d{1,3}$");
 
-  public static int execute(CommandContext<ServerCommandSource> context, File logFile) {
+  public static int execute(CommandContext<CommandSourceStack> context, File logFile) {
     String query = StringArgumentType.getString(context, "query").trim();
     Map<String, Set<String>> ipToPlayers = new HashMap<>();
     Map<String, Set<String>> playerToIps = new HashMap<>();
 
-    final ServerCommandSource source = context.getSource();
+    final CommandSourceStack source = context.getSource();
 
     try {
       HandleAltsCommand.readLogFile(ipToPlayers, playerToIps, logFile);
     } catch (IOException e) {
-      context.getSource().sendError(Text.literal("§cFailed to read log file: " + e.getMessage()));
+      source.sendFailure(Component.literal("§cFailed to read log file: " + e.getMessage()));
       return 0;
     }
 
     if ((query.contains(".") && !Permissions.check(source, "altx.viewips", 4))) {
-      context
-          .getSource()
-          .sendFeedback(
-              () -> Text.literal("§cYou do not have permission to search for players using IPs"),
+      source.sendSuccess(
+              () -> Component.literal("§cYou do not have permission to search for players using IPs"),
               false);
       return 1;
     }
@@ -52,17 +50,15 @@ public class HandleAltsCommand {
       // Query is an IP address
       Set<String> players = ipToPlayers.get(query);
       if (players != null) {
-        context
-            .getSource()
-            .sendFeedback(
+        source
+            .sendSuccess(
                 () ->
-                    Text.literal(
+                    Component.literal(
                         "§bUsers joined on §3" + query + "§b: §f" + String.join(", ", players)),
                 false);
       } else {
-        context
-            .getSource()
-            .sendFeedback(() -> Text.literal("§cNo users found for IP: " + query), false);
+        source
+            .sendSuccess(() -> Component.literal("§cNo users found for IP: " + query), false);
       }
       return 1;
     }
@@ -70,7 +66,7 @@ public class HandleAltsCommand {
     // Query is a username
     Set<String> ips = playerToIps.get(query);
     if (ips != null) {
-      MutableText response = Text.literal("");
+        MutableComponent response = Component.literal("");
       if (Permissions.check(source, "altx.viewips", 4)) {
         response
             .append("§bPlayer §3")
@@ -91,23 +87,22 @@ public class HandleAltsCommand {
         }
         response.append(String.join(", ", players));
       }
-      context.getSource().sendFeedback(() -> response, false);
+      source.sendSuccess(() -> response, false);
     } else {
-      context
-          .getSource()
-          .sendFeedback(() -> Text.literal("§cNo IPs found for player: " + query), false);
+      source
+          .sendSuccess(() -> Component.literal("§cNo IPs found for player: " + query), false);
     }
     return 1;
   }
 
-  private static MutableText getIpText(String ip) {
-    return Text.literal(ip)
-        .styled(
+  private static Component getIpText(String ip) {
+    return Component.literal(ip)
+        .withStyle(
             style ->
                 style
-                    .withColor(Formatting.AQUA) // §b
+                    .withColor(ChatFormatting.AQUA) // §b
                     .withClickEvent(new ClickEvent.CopyToClipboard(ip))
-                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Copy"))));
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Copy"))));
   }
 
   private static void readLogFile(

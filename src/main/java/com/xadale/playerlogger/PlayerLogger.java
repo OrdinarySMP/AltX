@@ -15,8 +15,8 @@ import club.minnced.discord.webhook.send.WebhookMessageBuilder;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 public class PlayerLogger implements ModInitializer {
 
@@ -39,7 +39,7 @@ public class PlayerLogger implements ModInitializer {
           String playerName = handler.getPlayer().getName().getString();
 
           String ipAddress = "Unknown IP";
-          if (handler.getConnectionAddress() instanceof InetSocketAddress inetSocketAddress) {
+          if (handler.getRemoteAddress() instanceof InetSocketAddress inetSocketAddress) {
             ipAddress = inetSocketAddress.getAddress().getHostAddress();
           }
 
@@ -83,13 +83,13 @@ public class PlayerLogger implements ModInitializer {
 
                 // Send the message to staff
                 server
-                    .getPlayerManager()
                     .getPlayerList()
+                    .getPlayers()
                     .forEach(
                         player -> {
                           if (Permissions.check(player, "altx.notify", 4)) {
-                            player.sendMessage(
-                                Text.literal(ingameMessage).formatted(Formatting.RED), false);
+                            player.sendSystemMessage(
+                                Component.literal(ingameMessage).withStyle(ChatFormatting.RED), false);
                           }
                         });
               }
