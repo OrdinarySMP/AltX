@@ -38,6 +38,9 @@ configurations {
 shadowJar {
 	configurations = [project.configurations.embed]
 	relocate 'club.minnced', 'dcshadow.club.minnced'
+
+	exclude("kotlin/**")
+	exclude("META-INF/kotlin*")
 }
 
 dependencies {
@@ -106,4 +109,8 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+}
+
+configurations.all {
+	exclude group: "org.jetbrains.kotlin"
 }
