@@ -3,6 +3,8 @@ package com.xadale.playerlogger;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.xadale.playerlogger.commands.HandleAltsCommand;
 import com.xadale.playerlogger.commands.ListIpsWithMultiplePlayers;
+import com.xadale.playerlogger.commands.CommandPurgeIp;
+import com.xadale.playerlogger.commands.CommandPurgePlayer;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
@@ -48,23 +50,34 @@ public class Commands {
                                 "\n§b/altx trace <ip> §fShows all players on given IP address");
                           }
                         }
+
+                        if (Permissions.check(source, "altx.purge.ip", 4)) {
+                          help.append(
+                              "\n§b/altx purge <ip> §fDeletes all instances of <ip> from the database");
+                        }
+
+                        if (Permissions.check(source, "altx.purge.player", 4)) {
+                          help.append(
+                              "\n§b/altx purge <player> §fDeletes all instances of <player> from the database");
+                        }
+
                         help.append("\n§3Special thanks to the Ordinary SMP team!");
 
-                        source
-                            .sendSuccess(() -> Component.literal(help.toString()), false);
+                        source.sendSuccess(() -> Component.literal(help.toString()), false);
 
                         return 1; // Return success
                       })
+
                   // Command Trace
                   .then(
-                          net.minecraft.commands.Commands.literal("trace")
+                      net.minecraft.commands.Commands.literal("trace")
                           .requires(Permissions.require("altx.trace", 4))
                           .then(
-                                  net.minecraft.commands.Commands.argument("query", StringArgumentType.string())
+                              net.minecraft.commands.Commands.argument(
+                                      "query", StringArgumentType.string())
                                   .suggests(
                                       (context, builder) -> {
-                                        String partialQuery =
-                                            builder.getRemaining(); // Get the current typed string
+                                        String partialQuery = builder.getRemaining();
                                         for (ServerPlayer player :
                                             context
                                                 .getSource()
@@ -87,12 +100,63 @@ public class Commands {
 
                   // Command list
                   .then(
-                          net.minecraft.commands.Commands.literal("list")
+                      net.minecraft.commands.Commands.literal("list")
                           .requires(Permissions.require("altx.list", 4))
                           .executes(
                               (context) ->
                                   ListIpsWithMultiplePlayers.execute(
-                                      context, this.altx.getLogFile()))));
+                                      context, this.altx.getLogFile())))
+
+                  // Command purge
+                  .then(
+                      net.minecraft.commands.Commands.literal("purge")
+
+                          // Purge Player
+                          .then(
+                              net.minecraft.commands.Commands.literal("player")
+                                  .requires(Permissions.require("altx.purge.player", 4))
+                                  .then(
+                                      net.minecraft.commands.Commands.argument(
+                                              "player", StringArgumentType.word())
+                                          .suggests(
+                                              (context, builder) -> {
+                                                String partialQuery = builder.getRemaining();
+                                                for (ServerPlayer player :
+                                                    context
+                                                        .getSource()
+                                                        .getServer()
+                                                        .getPlayerList()
+                                                        .getPlayers()) {
+                                                  String playerName = player.getName().getString();
+                                                  if (playerName
+                                                      .toLowerCase()
+                                                      .startsWith(partialQuery.toLowerCase())) {
+                                                    builder.suggest(playerName);
+                                                  }
+                                                }
+                                                return builder.buildFuture();
+                                              })
+                                          .executes(
+                                              (context) ->
+                                                  CommandPurgePlayer.execute(
+                                                      context,
+                                                      StringArgumentType.getString(
+                                                          context, "player"),
+                                                      this.altx.getLogFile()))))
+
+                          // Purge IP
+                          .then(
+                              net.minecraft.commands.Commands.literal("ip")
+                                  .requires(Permissions.require("altx.purge.ip", 4))
+                                  .then(
+                                      net.minecraft.commands.Commands.argument(
+                                              "ip", StringArgumentType.greedyString())
+                                          .executes(
+                                              (context) ->
+                                                  CommandPurgeIp.execute(
+                                                      context,
+                                                      StringArgumentType.getString(context, "ip"),
+                                                      this.altx.getLogFile()))))));
         });
   }
 }

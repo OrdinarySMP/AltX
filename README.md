@@ -28,3 +28,5 @@ Commands/Permissions
 | `altx.trace` | `/altx trace <player>`| Shows all players on given players IP address |
 | `altx.viewips` | - | Allows the player to see & search for IP addresses in `altx list` & `altx trace <ip>` |
 | `altx.notify` | - | Notifies players when a new player joins using an IP address that is already in the database |
+| `altx.purge.ip` | `/altx purge ip <ip>` | Deletes all instances of `<ip>` from the database |
+| `altx.purge.player` | `/altx purge player <player>` | Deletes all instances of `<player>` from the database |
