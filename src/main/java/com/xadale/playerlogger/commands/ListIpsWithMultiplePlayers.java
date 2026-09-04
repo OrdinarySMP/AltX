@@ -49,7 +49,7 @@ public class ListIpsWithMultiplePlayers {
     }
 
     if (!found) {
-      response.append("§cNo IPs with two or more players found.");
+      response.append("§c No IPs with two or more players found.");
     }
 
     // Send the response

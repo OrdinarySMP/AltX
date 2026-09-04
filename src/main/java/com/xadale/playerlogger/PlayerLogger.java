@@ -76,7 +76,8 @@ public class PlayerLogger implements ModInitializer {
                       new WebhookMessageBuilder()
                           .setContent(discordMessage)
                           .setUsername("AltX Notification")
-                          .setAvatarUrl("https://raw.githubusercontent.com/OrdinarySMP/AltX/main/assets/AltX-avatar.png");
+                          .setAvatarUrl(
+                              "https://raw.githubusercontent.com/OrdinarySMP/AltX/main/assets/AltX-avatar.png");
 
                   this.webhookClient.send(builder.build());
                 }
@@ -89,7 +90,8 @@ public class PlayerLogger implements ModInitializer {
                         player -> {
                           if (Permissions.check(player, "altx.notify", 4)) {
                             player.sendSystemMessage(
-                                Component.literal(ingameMessage).withStyle(ChatFormatting.RED), false);
+                                Component.literal(ingameMessage).withStyle(ChatFormatting.RED),
+                                false);
                           }
                         });
               }
